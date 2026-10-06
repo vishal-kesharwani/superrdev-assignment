@@ -3,13 +3,17 @@ import SearchBar from './components/SearchBar';
 import StatusFilter from './components/StatusFilter';
 import TaskTable from './components/TaskTable';
 import { useTasks } from './hooks/useTasks';
+import { useDebouncedValue } from './hooks/useDebouncedValue';
 
 export default function App() {
   const [query, setQuery] = useState('');
   const [status, setStatus] = useState('');
   const [page, setPage] = useState(1);
 
-  const { tasks, total, loading, error } = useTasks(query, status, page, 10);
+  // Debounce only the value sent to the API, so typing stays instant.
+  const debouncedQuery = useDebouncedValue(query, 300);
+
+  const { tasks, total, loading, error } = useTasks(debouncedQuery, status, page, 10);
 
   const totalPages = Math.ceil(total / 10);
 
