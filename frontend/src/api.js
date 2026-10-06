@@ -8,7 +8,6 @@ export async function fetchTasks({ query = '', status = '', page = 1, pageSize =
   params.set('pageSize', String(pageSize));
 
   const url = `${API_BASE}/tasks?${params.toString()}`;
-  console.log('[api] fetching:', url);
 
   const response = await fetch(url, { signal });
 

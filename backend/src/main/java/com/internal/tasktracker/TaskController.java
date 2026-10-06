@@ -2,6 +2,8 @@ package com.internal.tasktracker;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -31,7 +33,7 @@ public class TaskController {
 
         // Normalize query input
         String query = q == null ? "" : q.trim();
-        String searchTerm = "%" + query.toLowerCase() + "%";
+        String searchTerm = "%" + escapeLike(query.toLowerCase()) + "%";
 
         // --- Input validation -------------------------------------------------
         // page/pageSize are int, so a non-numeric value already fails in Spring with a 400.
@@ -47,6 +49,11 @@ public class TaskController {
             // safely give it the maximum. Protects the DB from unbounded result sets.
             pageSize = MAX_PAGE_SIZE;
         }
+        // Spring Data refuses offsets beyond Integer.MAX_VALUE, so reject instead of 500-ing.
+        if ((long) (page - 1) * pageSize > Integer.MAX_VALUE) {
+            return badRequest("page " + page + " with pageSize " + pageSize
+                    + " exceeds the maximum supported offset");
+        }
 
         // Parse status filter
         String normalizedStatus = null;
@@ -61,22 +68,29 @@ public class TaskController {
 
         log.debug("q=\"{}\" status={} page={} pageSize={}", query, normalizedStatus, page, pageSize);
 
-        List<Task> allResults = taskRepository.searchTasks(searchTerm, normalizedStatus);
-
-        // long arithmetic: (page - 1) * pageSize overflows int for large page values.
-        long start = (long) (page - 1) * pageSize;
-        long end = Math.min(start + pageSize, allResults.size());
-        List<Task> pageResults = (start < allResults.size())
-                ? allResults.subList((int) start, (int) end)
-                : Collections.emptyList();
+        // DB-level pagination: the database returns one page plus an exact count,
+        // instead of loading every matching row into memory and subList-ing it.
+        Page<Task> result = taskRepository.searchTasks(
+                searchTerm, normalizedStatus, PageRequest.of(page - 1, pageSize));
 
         Map<String, Object> response = new LinkedHashMap<>();
-        response.put("items", pageResults);
-        response.put("total", allResults.size());
+        response.put("items", result.getContent());
+        response.put("total", result.getTotalElements());
         response.put("page", page);
         response.put("pageSize", pageSize);
 
         return ResponseEntity.ok(response);
+    }
+
+    /**
+     * Escapes LIKE wildcards so user input is matched literally.
+     * Backslash must be escaped first, otherwise it would escape the escapes we add after it.
+     */
+    private static String escapeLike(String input) {
+        return input
+                .replace("\\", "\\\\")
+                .replace("%", "\\%")
+                .replace("_", "\\_");
     }
 
     /**
