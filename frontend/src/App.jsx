@@ -13,6 +13,18 @@ export default function App() {
   // Debounce only the value sent to the API, so typing stays instant.
   const debouncedQuery = useDebouncedValue(query, 300);
 
+  // Reset page in the change handlers (not an effect): when filters change the old
+  // page number is meaningless and would otherwise show "No tasks found".
+  const handleQueryChange = (value) => {
+    setQuery(value);
+    setPage(1);
+  };
+
+  const handleStatusChange = (value) => {
+    setStatus(value);
+    setPage(1);
+  };
+
   const { tasks, total, loading, error } = useTasks(debouncedQuery, status, page, 10);
 
   const totalPages = Math.ceil(total / 10);
@@ -25,8 +37,8 @@ export default function App() {
       </header>
 
       <div className="controls">
-        <SearchBar value={query} onChange={setQuery} />
-        <StatusFilter value={status} onChange={setStatus} />
+        <SearchBar value={query} onChange={handleQueryChange} />
+        <StatusFilter value={status} onChange={handleStatusChange} />
       </div>
 
       <TaskTable tasks={tasks} loading={loading} error={error} />
