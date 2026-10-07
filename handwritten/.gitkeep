@@ -1,2 +1,5 @@
 # placeholder file - keeps the handwritten/ folder tracked in git
-# actual content: screenshots/ (before & after proof) and bug explanations
+# content:
+#   WRITINGS/page1_1..page1_5.jpg.jpeg - handwritten notes, 5 scanned pages
+#   screenshots/ - before & after proof (11 PNGs)
+#   bug1/bug2/bug5-explanation.md + bug3-4-6-7-explanations.md - digital explanations with screenshots
